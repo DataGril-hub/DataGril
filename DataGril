@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>🍔 Data Grill - Las mejores Hamburguesas</title>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<style>
+:root{--accent:#f84c0d;--bg:#f52d1f;--card:#ffffff;}
+body{font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin:0;color:#222;min-height:100vh;
+  background: url("https://i.ibb.co/cS3rLFhL/Gemini-Generated-Image-pku5ybpku5ybpku5.png") no-repeat center top fixed;
+  background-size:60%; background-color:#000; background-position:center top;}
+body::before{content:"";position:absolute;inset:0;background:rgba(0,0,0,0.4);z-index:-1;}
+header{background:linear-gradient(90deg,var(--accent),#ff9a66);color:#fff;padding:18px 24px;box-shadow:0 4px 12px rgba(0,0,0,0.3);}
+.container{max-width:1100px;margin:24px auto;padding:0 16px;}
+h1,h2,h3,h4{margin:0;}
+/* Grid modificado a 2 columnas */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
+  gap:20px;
+}
+.card{background:var(--card);border-radius:14px;padding:16px;box-shadow:0 6px 20px rgba(0,0,0,0.15);transition:transform 0.2s, box-shadow 0.2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 10px 26px rgba(0,0,0,0.25);}
+.card img{width:100%;height:160px;object-fit:cover;border-radius:10px;}
+.card h3{margin:10px 0 6px;font-size:1.1rem;color:#222;}
+.card p{margin:0 0 10px;font-size:0.92rem;color:#555;}
+.row{display:flex;gap:8px;align-items:center;}
+button{background:var(--accent);border:none;color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;transition:background 0.2s, transform 0.2s;}
+button:hover{background:#e85c28;transform:scale(1.05);}
+.muted{background:#ddd;color:#333;}
+.cart-btn{position:fixed;right:18px;bottom:18px;border-radius:999px;padding:14px 18px;box-shadow:0 8px 20px rgba(0,0,0,0.3);font-weight:bold;}
+.badge{background:#fff;color:#111;padding:4px 8px;border-radius:999px;margin-left:8px;font-weight:600;}
+.modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);z-index:1000;}
+.modal.active{display:flex;}
+.modal-content{width:95%;max-width:640px;background:#fff;border-radius:14px;padding:20px;box-shadow:0 14px 34px rgba(0,0,0,0.3);animation:fadeIn 0.3s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+table{width:100%;border-collapse:collapse;}
+td,th{padding:8px;text-align:left;}
+tfoot td{font-weight:bold;}
+input[type="text"],input[type="tel"]{width:100%;padding:10px;border-radius:8px;border:1px solid #ccc;margin-bottom:10px;}
+.small{font-size:0.9rem;color:#eee;}
+.export-btn{position:fixed;right:18px;bottom:80px;border-radius:999px;padding:14px 18px;background:#28a745;color:#fff;font-weight:bold;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,0.3);}
+.export-btn:hover{background:#218838;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container" style="display:flex;justify-content:space-between;align-items:center">
+    <div>
+      <h1 style="margin:0; display:flex; align-items:center; gap:8px;">
+        <img src="https://i.ibb.co/cS3rLFhL/Gemini-Generated-Image-pku5ybpku5ybpku5.png" alt="Logo Hamburguesa" style="width:100px; height:100px;"/>
+        Data Grill
+      </h1>
+      <div class="small">¡LAS MEJORES HAMBURGUESAS! - SELECCIONA Y PIDE FÁCIL</div>
+    </div>
+    <div>
+      <button id="openCartBtn" class="cart-btn">🛒 Carrito <span id="cartCount" class="badge">0</span></button>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <section>
+    <h2 style="color:#fff;text-shadow:1px 1px 4px rgba(0,0,0,0.6);margin-bottom:16px">Menú</h2>
+    <div class="grid" id="products"></div>
+  </section>
+</main>
+
+<div id="cartModal" class="modal" aria-hidden="true">
+  <div class="modal-content">
+    <h3>Tu carrito</h3>
+    <div id="cartArea"></div>
+    <hr />
+    <div>
+      <h4>Datos de envío / contacto</h4>
+      <label>Nombre</label><input id="customerName" type="text" placeholder="Tu nombre" />
+      <label>Teléfono</label><input id="customerPhone" type="tel" placeholder="+504 8888-8888" />
+      <label>Dirección (opcional)</label><input id="customerAddress" type="text" placeholder="Dirección de entrega" />
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button id="closeCart" class="muted">Seguir comprando</button>
+      <button id="checkoutBtn">✅ Enviar pedido</button>
+    </div>
+  </div>
+</div>
+
+<button class="export-btn" id="exportBtn">📥 Exportar todos los pedidos</button>
+
+<script>
+const PRODUCTS = [
+  {id:1,name:'Hamburguesa Clásica',desc:'Carne, queso, lechuga, tomate',price:100,img:'https://copilot.microsoft.com/th/id/BCO.9768da06-0294-49a7-acc4-eaf2e82417c6.png'},
+  {id:2,name:'Orden de Papas',desc:'Crocantes con salsa',price:50,img:'https://copilot.microsoft.com/th/id/BCO.823305a7-ce76-4d4c-8854-3debba4e211f.png'},
+  {id:3,name:'Extra Papa',desc:'Agregación de papas en hamburguesa',price:25,img:'https://copilot.microsoft.com/th/id/BCO.823305a7-ce76-4d4c-8854-3debba4e211f.png'},
+  {id:4,name:'Extra Hamburguesa',desc:'Agregación de carne extra',price:50,img:'https://copilot.microsoft.com/th/id/BCO.68b2ccff-5204-4867-89f7-b57dc98dece5.png'}
+];
+
+const CART_KEY = 'demo_cart_v1';
+const ALL_ORDERS_KEY = 'all_orders_v1';
+let cart = JSON.parse(localStorage.getItem(CART_KEY) || '[]');
+let allOrders = JSON.parse(localStorage.getItem(ALL_ORDERS_KEY) || '[]');
+
+const productsDiv = document.getElementById('products');
+const cartCountEl = document.getElementById('cartCount');
+const cartModal = document.getElementById('cartModal');
+const cartArea = document.getElementById('cartArea');
+const exportBtn = document.getElementById('exportBtn');
+
+function saveCart(){ localStorage.setItem(CART_KEY, JSON.stringify(cart)); renderCartCount(); }
+function saveAllOrders(){ localStorage.setItem(ALL_ORDERS_KEY, JSON.stringify(allOrders)); }
+
+function renderProducts(){
+  productsDiv.innerHTML='';
+  for(const p of PRODUCTS){
+    const el = document.createElement('div'); el.className='card';
+    el.innerHTML = `
+      <img src="${p.img}" alt="${p.name}" />
+      <h3>${p.name}</h3>
+      <p>${p.desc}</p>
+      <div class="row">
+        <div style="flex:1;font-weight:600">LPS ${p.price.toFixed(2)}</div>
+        <button onclick="addToCart(${p.id})">Añadir</button>
+      </div>
+    `;
+    productsDiv.appendChild(el);
+  }
+}
+
+function renderCartCount(){
+  const totalQty = cart.reduce((s,i)=>s+i.qty,0);
+  cartCountEl.textContent=totalQty;
+}
+
+function addToCart(id){
+  const prod = PRODUCTS.find(p=>p.id===id);
+  if(!prod) return;
+  const found = cart.find(i=>i.id===id);
+  if(found) found.qty++; else cart.push({id:prod.id,name:prod.name,price:prod.price,qty:1});
+  saveCart();
+}
+
+function openCart(){ renderCartInside(); cartModal.classList.add('active'); cartModal.setAttribute('aria-hidden','false'); }
+function closeCart(){ cartModal.classList.remove('active'); cartModal.setAttribute('aria-hidden','true'); }
+
+function renderCartInside(){
+  if(cart.length===0){ cartArea.innerHTML='<p>Carrito vacío. Agrega algo del menú.</p>'; return; }
+  let html='<table><thead><tr><th>Item</th><th>Cant.</th><th>Precio</th><th></th></tr></thead><tbody>';
+  for(const item of cart){
+    html+=`<tr><td>${item.name}</td><td>${item.qty}</td><td>LPS ${(item.price*item.qty).toFixed(2)}</td>
+    <td><button onclick="changeQty(${item.id},-1)">-</button> <button onclick="changeQty(${item.id},1)">+</button> <button onclick="removeItem(${item.id})">Eliminar</button></td></tr>`;
+  }
+  const total = cart.reduce((s,i)=>s+i.qty*i.price,0);
+  html+=`</tbody><tfoot><tr><td>Total</td><td></td><td>LPS ${total.toFixed(2)}</td><td></td></tr></tfoot></table>`;
+  cartArea.innerHTML = html;
+}
+
+function changeQty(id,delta){
+  const it = cart.find(c=>c.id===id); if(!it) return;
+  it.qty += delta; if(it.qty<=0) cart = cart.filter(c=>c.id!==id);
+  saveCart(); renderCartInside();
+}
+function removeItem(id){ cart = cart.filter(c=>c.id!==id); saveCart(); renderCartInside(); }
+
+function checkout(){
+  if(cart.length===0){ alert('Carrito vacío'); return; }
+  const name = document.getElementById('customerName').value.trim();
+  const phone = document.getElementById('customerPhone').value.trim();
+  const address = document.getElementById('customerAddress').value.trim();
+  if(!name || !phone){ alert('Ingrese nombre y teléfono'); return; }
+
+  const order = {
+    customer:{name,phone,address},
+    items:cart,
+    total:cart.reduce((s,i)=>s+i.qty*i.price,0),
+    createdAt: new Date().toLocaleString()
+  };
+
+  allOrders.push(order); saveAllOrders();
+  cart=[]; saveCart(); closeCart();
+  alert('Pedido guardado con éxito!');
+}
+
+function exportOrdersToExcel(){
+  if(allOrders.length===0){ alert('No hay pedidos para exportar'); return; }
+  const ws_data=[];
+  allOrders.forEach((o,i)=>{
+    ws_data.push([`Pedido ${i+1} - Fecha: ${o.createdAt}`, '', '', '', '', '']);
+    ws_data.push(['Cliente', 'Teléfono', 'Dirección', 'Item', 'Cantidad', 'Precio']);
+    o.items.forEach(it=>{ ws_data.push([o.customer.name,o.customer.phone,o.customer.address,it.name,it.qty,it.price*it.qty]); });
+    ws_data.push(['Total','','','', '', o.total]);
+    ws_data.push([]);
+  });
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(ws_data);
+  XLSX.utils.book_append_sheet(wb,ws,'Pedidos');
+  XLSX.writeFile(wb,'Pedidos_DataGrill.xlsx');
+}
+
+document.getElementById('openCartBtn').addEventListener('click',openCart);
+document.getElementById('closeCart').addEventListener('click',closeCart);
+document.getElementById('checkoutBtn').addEventListener('click',checkout);
+exportBtn.addEventListener('click',exportOrdersToExcel);
+
+window.addToCart=addToCart;
+window.changeQty=changeQty;
+window.removeItem=removeItem;
+
+renderProducts();
+renderCartCount();
+</script>
+
+</body>
+</html>
